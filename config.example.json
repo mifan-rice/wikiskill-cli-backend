@@ -1,0 +1,39 @@
+{
+  "_comment": "把 command 换成你自己的 agent CLI；占位符见 README。示例用 hermes 风格参数，仅供参考。",
+  "command": [
+    "your-agent-cli",
+    "chat",
+    "--oneshot",
+    "--prompt-file", "{prompt_file}",
+    "--workdir", "{workdir}",
+    "--model", "{model}",
+    "--max-turns", "{max_turns}"
+  ],
+  "profile_dir": ".wikiskill-cli-home",
+  "env": {
+    "YOUR_AGENT_HOME": "{profile}"
+  },
+  "model": "default",
+  "max_turns": 15,
+  "timeout_grace": 30,
+  "session_export": {
+    "mode": "cmd",
+    "cmd": ["your-agent-cli", "sessions", "export", "--latest",
+            "--out", "{run_dir}/session.raw.jsonl"],
+    "output": "{run_dir}/session.raw.jsonl"
+  },
+  "deliverables": [
+    {
+      "tag_prefix": "maintain",
+      "glob": "wiki/patterns/*.md",
+      "mode": "new_or_changed"
+    },
+    {
+      "tag_prefix": "propose",
+      "glob": "runs/proposals/iter-{iter}.json",
+      "mode": "exists"
+    }
+  ],
+  "max_deliverable_retries": 3,
+  "retry_prompt": "Your previous turn delivered no files. Deliver now — write the file(s) first, then stop. Missing: {missing}"
+}

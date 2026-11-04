@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: smoke (py${{ matrix.python }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # 硬闸 1：语法 / 字节码
+      - name: Byte-compile
+        run: python -m compileall -q backend.py fixtures tests
+
+      # 硬闸 2：协议端到端（假 CLI，无模型、无网络、无凭据）
+      - name: Protocol smoke test
+        run: python tests/smoke.py
+
+      # 提示性：未定义名 / 语法级问题（不拦合并）
+      - name: Lint (advisory)
+        continue-on-error: true
+        run: |
+          python -m pip install --quiet ruff
+          ruff check .

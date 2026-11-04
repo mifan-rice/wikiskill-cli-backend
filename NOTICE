@@ -1,0 +1,21 @@
+wikiskill CLI backend (unofficial)
+==================================
+
+This project is an independent implementation of an execution backend for the
+WikiSkill self-evolving skill loop. It contains no code copied from WikiSkill.
+
+Upstream references
+-------------------
+* Paper:  "WikiSkill" — arXiv:2608.27454
+* Project: https://github.com/ashutoshsinghpr7/wikiskill (PyPI: wikiskill)
+
+The AgentBackend protocol implemented here (profile_dir / env /
+bootstrap_profile / set_active_skills / patch_model / run / export_session)
+and the session-transcript contract consumed by the upstream gating step are
+derived from the above public project and its paper. No license is declared in
+the upstream repository as of this writing, therefore no upstream files are
+redistributed; only the protocol shape is re-implemented.
+
+This backend is not affiliated with or endorsed by the WikiSkill authors.
+If you redistribute it, keep this file so users can tell which project is
+which.
