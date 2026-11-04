@@ -102,7 +102,37 @@ memory/rules/工具清单，之后走缓存或轻量路径）——**别把 4956
 套一层 agent CLI 的基线开销比直接调 API 高两个量级，做预算要按「最坏情况」算。
 
 
+### `examples/hermes-file.json`（同一 CLI，prompt 走**文件**，**本机真跑通过**）
+
+`chat --query-file PATH`：CLI 自己读文件，**argv 里只有路径**。两件事因此成立：
+
+1. **不受 argv 上限约束**（Windows ≈32767 字符）——技能全文注入（`_compose_prompt`
+   拼 SKILL.md 全文，上限 60000 字符）才真能走通；`hermes.json` 那条做不到。
+2. **prompt 内容不被 shell 解释**：`|` `;` 反引号 `$(...)` 中文引号反斜杠全都原样到达
+   （`--query-file` 文档口径：nothing is shell-interpreted）。
+   实测（2026-10-21，job `9d610198`）：prompt 545 字节，内含一张
+   `| a;b | c|d |` / `` `code` `` / `$(echo hi)` / `引号"内"` / `反斜杠\尾` 的表，
+   agent 写出 `out.md` **100 字节 / 5 行，与原文逐字节一致**，`$(echo hi)` 没有被展开。
+   这同时意味着它**能过诛仙壳层（shell 工具）的元字符检查**——那里 argv 里出现 `|`
+   会被直接拒（实测），文件型通道没有这个问题。
+
+两个坑（实测，不修就等着踩）：
+
+* **`--usage-file` 在这个路径不写文件**。run3 / run4 两轮都是 `exit_code 0`（stdout
+  `DONE` / `PING`），但 run 目录里只有 `prompt.md`、`out.md`，**没有 `usage.json`**
+  （`-z` 路径会写）。补法：加 `--format stream-json`，实测 result 行带
+  `tokens{input,output,total,cache_read,cache_write}` 与 `duration_ms`
+  （run5：in 20405 / out 3 / total 52920 / cache_read 32512 / 17.4s），
+  **但没有 cost 字段**——成本要按官方单价自算。
+* **`chat` 比 `-z` 慢、且往 stdout 打启动噪音**：`Warning: Unknown toolsets: a2a, bfl,
+  mcp-codegraph`、`rtk` plugin 警告、memory 嵌入模型（bge-micro-v2）拉不到时的 5 次重试。
+  纯文本模式下解析 stdout 要容错（`-z` 那条是干净的）。
+
+`--usage-file` 是**全局**选项，必须放在 `chat` **之前**，否则 argparse 不认。
+
 ### `examples/codex.json`（参数来自官方文档，**未本机实测**）
+
+
 
 关键点：
 

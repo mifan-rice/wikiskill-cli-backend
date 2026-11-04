@@ -1,0 +1,33 @@
+{
+  "_comment": "真实 CLI 示例（prompt 走文件版）：Hermes Agent v0.21.5 的 `chat --query-file`。与 hermes.json 的区别只在 prompt 怎么进门——prompt（含 active 技能全文）由 backend 写成 {prompt_file} = <ws>/runs/<tag>/query.txt（UTF-8，见 backend.py 的 run()），CLI 自己读文件，**argv 里只有路径**。所以：①不受 Windows ≈32767 字符 argv 上限约束；②prompt 里 `|` `;` 反引号 `$(...)` 中文引号反斜杠都原样保留——2026-10-21 实测：545 字节 prompt 里放了一张含 `a;b`/`c|d`/`$(echo hi)` 的表，agent 写出 out.md 100 字节 5 行、与原文逐字节一致，未被 shell 吞或展开；③因此也能过诛仙壳层（shell 工具）的元字符检查。⚠️ 实测两个坑：①**`--usage-file` 在本路径不写文件**——run3/run4 两轮 exit 0 但 run 目录只有 prompt.md/out.md，无 usage.json（`-z` 路径会写，所以成本账在文件型通道会丢）；补法是加 `--format stream-json`：实测 result 行带 `tokens{input,output,total,cache_read,cache_write}` 与 duration_ms，**但不含 cost**（成本要按官方价自算）。②`chat` 子命令启动比 `-z` 慢、且往 stdout 打启动噪音（toolsets/plugin 警告、memory 嵌入模型拉取失败重试），纯文本模式下要容错解析；`-z` 那条 stdout 是干净的。另：`--usage-file` 是全局选项，必须放在 `chat` 之前，否则 argparse 不认。",
+  "command": [
+    "hermes",
+    "--usage-file", "{run_dir}/usage.json",
+    "chat",
+    "--query-file", "{prompt_file}",
+    "--oneshot",
+    "-Q",
+    "--in", "{workdir}",
+    "--max-turns", "{max_turns}"
+  ],
+  "max_turns": 15,
+  "timeout_grace": 120,
+  "run_budget": 900,
+  "session_export": {
+    "mode": "stdout"
+  },
+  "deliverables": [
+    {
+      "tag_prefix": "maintain",
+      "glob": "wiki/patterns/*.md",
+      "mode": "new_or_changed"
+    },
+    {
+      "tag_prefix": "propose",
+      "glob": "runs/proposals/*.json",
+      "mode": "new_or_changed"
+    }
+  ],
+  "max_deliverable_retries": 1,
+  "retry_prompt": "Your previous turn delivered no files. Deliver now — write the file(s) first, then stop. Missing: {missing}"
+}
