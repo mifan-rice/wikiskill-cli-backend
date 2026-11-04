@@ -86,11 +86,21 @@ runner = lambda **kw: BACKEND.run(**kw).as_dict()
 **argv 有长度上限**（Windows ≈32767 字符），prompt 很大时请换成 stdin 型 CLI。
 `--usage-file` 在跑完后写用量 JSON（含估算成本 / token / api_calls，跑失败也写），核账看它。
 
-本机实测（推理轮，prompt 为 `Reply with exactly: PONG`）：exit 0、33.3s、
-stdout = `PONG`、`usage.json` 记 deepseek-flash / in 49562 / out 3 / 1 次 API / $0.0074。
+本机真跑三轮（2026-10-21）：
+
+| 轮次 | 结果 | 证据 |
+| --- | --- | --- |
+| 推理轮，无技能（`Reply with exactly: PONG`） | exit 0、33.3s | stdout=`PONG`；`usage.json`: deepseek-flash / in 49562 / out 3 / 1 次 API / $0.0074 |
+| framework 轮（要求写 `wiki/patterns/pong.md`） | exit 0、27.1s、attempts 1 | 文件落盘 13 字节、内容正确；in 51579 / out 371 / 4 次 API / $0.0085 |
+| 推理轮，带 active 技能 | exit 0、17.6s | dry_run prompt 24→**270 字符**（技能全文进 argv）；模型回复 `DEMO-SKILL-LOADED`＝确实照注入的技能执行；in 221 / out 119 / 1 次 API / $0.00026 |
+
+⚠️ 两组输入 token 差 200 倍（49562 vs 221），成因未查清（疑似首轮冷启动加载全量
+memory/rules/工具清单，之后走缓存或轻量路径）——**别把 49562 当每次的固定开销**，
+但也别当它不会发生，做预算按最坏情况算。
 
 ⚠️ 那 49562 输入 tokens 是 **CLI 自带的系统提示与工具清单**，不是任务本身：
-套一层 agent CLI 的基线开销比直接调 API 高两个量级，做预算要按「每次调用」算。
+套一层 agent CLI 的基线开销比直接调 API 高两个量级，做预算要按「最坏情况」算。
+
 
 ### `examples/codex.json`（参数来自官方文档，**未本机实测**）
 
