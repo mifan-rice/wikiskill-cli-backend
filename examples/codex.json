@@ -1,0 +1,38 @@
+{
+  "_comment": "真实 CLI 示例：OpenAI Codex CLI 的 codex exec（非交互）。prompt 走 stdin（结尾的 '-'），所以 command 里没有 {prompt_file}。⚠️ 这些参数是按官方文档整理的，没在本机实测过——本机执行层白名单不放行 codex.exe，先自己跑 `codex exec --help` 核对 --skip-git-repo-check / --cd / -m / --sandbox / CODEX_HOME 是否都还存在，模型名也要改成你账号能用的。",
+  "command": [
+    "codex",
+    "exec",
+    "--skip-git-repo-check",
+    "--cd", "{workdir}",
+    "--sandbox", "workspace-write",
+    "-m", "{model}",
+    "-"
+  ],
+  "stdin": "prompt_file",
+  "profile_dir": ".codex-home",
+  "env": {
+    "CODEX_HOME": "{profile}"
+  },
+  "model": "gpt-5-codex",
+  "max_turns": 15,
+  "timeout_grace": 120,
+  "run_budget": 900,
+  "session_export": {
+    "mode": "stdout"
+  },
+  "deliverables": [
+    {
+      "tag_prefix": "maintain",
+      "glob": "wiki/patterns/*.md",
+      "mode": "new_or_changed"
+    },
+    {
+      "tag_prefix": "propose",
+      "glob": "runs/proposals/iter-{iter}.json",
+      "mode": "exists"
+    }
+  ],
+  "max_deliverable_retries": 1,
+  "retry_prompt": "Your previous turn delivered no files. Deliver now — write the file(s) first, then stop. Missing: {missing}"
+}

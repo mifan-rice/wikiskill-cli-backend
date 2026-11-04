@@ -16,7 +16,8 @@ import sys
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--prompt-file", required=True)
+    # 与真实 CLI（如 `codex exec -`）一样：可以吃文件，也可以吃 stdin
+    ap.add_argument("--prompt-file", default="")
     ap.add_argument("--workdir", default=".")
     ap.add_argument("--run-dir", default="")
     ap.add_argument("--session-out", default="")
@@ -25,7 +26,10 @@ def main() -> int:
     ap.add_argument("--max-turns", default="")
     a = ap.parse_args()
 
-    prompt = open(a.prompt_file, encoding="utf-8").read()
+    if a.prompt_file:
+        prompt = open(a.prompt_file, encoding="utf-8").read()
+    else:
+        prompt = sys.stdin.read()
     deliver = os.environ.get("FAKE_DELIVER", "1") == "1"
     tag = a.tag
 

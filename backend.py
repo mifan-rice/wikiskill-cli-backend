@@ -353,7 +353,9 @@ class CliBackend:
                 proc = subprocess.run(cmd, cwd=workdir, env=env,
                                       capture_output=True, text=True,
                                       encoding="utf-8", errors="replace",
-                                      timeout=timeout)
+                                      timeout=timeout,
+                                      input=_stdin_payload(self.config,
+                                                           prompt_file))
                 out, err, code = proc.stdout, proc.stderr, proc.returncode
             except subprocess.TimeoutExpired as e:
                 out = (e.stdout or "") if isinstance(e.stdout, str) else ""
@@ -495,3 +497,20 @@ def _normalize_session(raw: Optional[str], dest: str, *,
     except OSError:
         return None
     return dest
+
+
+def _stdin_payload(cfg: Dict[str, Any], prompt_file: str) -> str:
+    """子进程 stdin 投喂策略。
+
+    * `stdin: "prompt_file"` → 把 prompt 全文喂进去，给只从 stdin 读的 CLI
+      （如 `codex exec -`）用；
+    * 未配置 → 喂空串。空串而非 None 是刻意的：None 会让子进程继承父进程
+      stdin，`codex exec` 这类 CLI 会一直等 EOF，挂到超时为止。
+    """
+    if (cfg.get("stdin") or "").strip() != "prompt_file":
+        return ""
+    try:
+        with open(prompt_file, encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return ""

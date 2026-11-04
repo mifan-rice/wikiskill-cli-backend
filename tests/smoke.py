@@ -167,6 +167,24 @@ def main():
     r = b5.run(WS, "z", tag="iter-5-inference")
     check("session_file=None", r.session_file is None, r.session_file)
 
+    # 9) stdin 投喂（给只吃 stdin 的 CLI，如 `codex exec -`）
+    print("[9] stdin 投喂")
+    stdin_cmd = [sys.executable, FAKE, "--workdir", "{workdir}",
+                 "--run-dir", "{run_dir}",
+                 "--session-out", "{run_dir}/session.raw.jsonl",
+                 "--tag", "{tag}", "--model", "{model}",
+                 "--max-turns", "{max_turns}"]
+    b6 = CliBackend(cfg(command=stdin_cmd, stdin="prompt_file"))
+    r = b6.run(WS, "prompt via stdin", tag="iter-6-inference")
+    out = open(r.stdout_path, encoding="utf-8").read()
+    n = int([l for l in out.splitlines() if l.startswith("prompt_chars=")][0]
+            .split("=")[1])
+    check("stdin 模式退出码 0", r.exit_code == 0, r.exit_code)
+    check("prompt 经 stdin 完整到达（含技能全文）",
+          n > len("prompt via stdin") + 40, n)
+    check("argv 里没有 prompt_file 占位符",
+          not any("prompt_file" in x for x in r.cmd), r.cmd)
+
     print()
     print(f"检查项 {checks}，失败 {len(fails)}")
     if fails:

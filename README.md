@@ -76,6 +76,29 @@ runner = lambda **kw: BACKEND.run(**kw).as_dict()
 * **非零退出不重试**：CLI 自己失败就如实把退出码和 stderr 交上去，不吞。
 * 未做并发 rollout（同一 workspace 并发会让 `set_active_skills` 互相踩）。
 
+## 接真实 CLI（已备 `codex exec` 示例，参数未本机实测）
+
+`examples/codex.json` 是一份可直接用的真实配置，关键点：
+
+* prompt 走 **stdin**（`codex exec ... -`），所以 `command` 里不出现 `{prompt_file}`，
+  配置项 `"stdin": "prompt_file"` 会让 backend 把 prompt 全文灌进子进程 stdin；
+* `{workdir}` 传给 `--cd`，agent 在 workspace 里改写文件；
+* `env.CODEX_HOME = {profile}` 把 codex 自己的家目录也钉进独立 profile。
+
+先验组装、再花钱跑模型，两步分开：
+
+```bash
+# ① 只到 exec 边界：技能注入、占位符展开、stdin 策略（不出网、不花钱）
+python examples/codex_dryrun.py
+# ② 真跑（需要该 exe 可执行 + 可出网到模型 API）
+python -c "import json,backend;backend.CliBackend(json.load(open('examples/codex.json'))).run('.', '你的任务', tag='iter-1-inference')"
+```
+
+⚠️ 这些参数来自官方文档，**没有在本机跑通过**：开发环境的执行层白名单不放行
+`codex.exe`，网络白名单也只放行 GitHub，所以真实的「跑一轮」在这里做不了——
+CI 与 smoke 全部基于假 CLI，这一点请当成硬事实。第一次真跑前务必
+`codex exec --help` 对一遍参数名，并把 `model` 改成你账号可用的名字。
+
 ## 持续集成
 
 `.github/workflows/ci.yml`（已随仓库提供）在 **Linux + Windows × Python 3.9 / 3.12**
