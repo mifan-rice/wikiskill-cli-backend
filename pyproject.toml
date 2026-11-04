@@ -5,7 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "wikiskill-cli-backend"
 version = "0.1.0"
-description = "Unofficial execution backend that plugs ANY one-shot agent CLI into the WikiSkill self-evolving skill loop"
+authors = [{ name = "Laohan", email = "311125144+mifan-rice@users.noreply.github.com" }]
+description = "Unofficial execution backend: plug any one-shot agent CLI (hermes, codex, …) into the WikiSkill self-evolving skill loop."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
