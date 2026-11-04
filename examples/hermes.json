@@ -1,0 +1,29 @@
+{
+  "_comment": "真实 CLI 示例：Hermes Agent v0.21.5 的 oneshot（`-z PROMPT`，prompt 全文走 argv；stdout 只输出最终回复，无 banner/无 session_id 行）。本机已实测 --version / --help 通过；`-z` 会 auto-bypass hermes 自己的审批，且会加载 CWD 的 tools/memory/rules/AGENTS.md。`--usage-file` 会在跑完后写 JSON 用量报告（含估算成本/模型/api_calls），跑失败也会写——联调核账就看它。⚠️ argv 有长度上限（Windows ≈32767 字符），prompt 很大时别用这个 profile，改用 stdin 型 CLI。",
+  "command": [
+    "hermes",
+    "-z", "{prompt}",
+    "--in", "{workdir}",
+    "--usage-file", "{run_dir}/usage.json"
+  ],
+  "max_turns": 15,
+  "timeout_grace": 120,
+  "run_budget": 900,
+  "session_export": {
+    "mode": "stdout"
+  },
+  "deliverables": [
+    {
+      "tag_prefix": "maintain",
+      "glob": "wiki/patterns/*.md",
+      "mode": "new_or_changed"
+    },
+    {
+      "tag_prefix": "propose",
+      "glob": "runs/proposals/*.json",
+      "mode": "new_or_changed"
+    }
+  ],
+  "max_deliverable_retries": 1,
+  "retry_prompt": "Your previous turn delivered no files. Deliver now — write the file(s) first, then stop. Missing: {missing}"
+}

@@ -35,7 +35,11 @@ DEFAULT_MODEL = "default"
 
 #: 这些占位符可出现在 command / env / session_export.output 里
 _PLACEHOLDERS = ("ws", "workdir", "run_dir", "tag", "model", "max_turns",
-                 "prompt_file", "profile", "state", "skills", "budget")
+                 "prompt_file", "profile", "state", "skills", "budget",
+                 # `prompt` = 全文走 argv（`-z "{prompt}"` 型 CLI）。
+                 # ⚠️ argv 有长度上限（Windows 约 32767 字符 / POSIX ARG_MAX），
+                 # 大 prompt + 技能全文注入会超；能用 {prompt_file} 就别用这个。
+                 "prompt")
 
 
 class RunResult:
@@ -135,6 +139,7 @@ class CliBackend:
                  "model": str(over.get("model", "")),
                  "max_turns": str(over.get("max_turns", "")),
                  "prompt_file": over.get("prompt_file", ""),
+                 "prompt": over.get("prompt", ""),
                  "budget": str(over.get("budget", ""))}
         return slots
 
@@ -327,7 +332,8 @@ class CliBackend:
 
         cmd = self._cmd_for(ws, workdir=workdir, run_dir=run_dir, tag=tag,
                             model=model, max_turns=max_turns,
-                            prompt_file=prompt_file, budget=run_budget)
+                            prompt_file=prompt_file, prompt=full_prompt,
+                            budget=run_budget)
         if dry_run:
             return RunResult(cmd=cmd, dry_run=True,
                              extra={"run_dir": run_dir,

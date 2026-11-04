@@ -185,6 +185,21 @@ def main():
     check("argv 里没有 prompt_file 占位符",
           not any("prompt_file" in x for x in r.cmd), r.cmd)
 
+    # 10) prompt 走 argv（`-z "{prompt}"` 型 CLI，如 hermes --oneshot）
+    print("[10] argv prompt 模式")
+    argv_cmd = [sys.executable, FAKE, "--prompt", "{prompt}",
+                "--tag", "{tag}", "--model", "{model}",
+                "--max-turns", "{max_turns}"]
+    b7 = CliBackend(cfg(command=argv_cmd))
+    r = b7.run(WS, "prompt via argv", tag="iter-7-inference", dry_run=True)
+    joined = " ".join(r.cmd)
+    check("{prompt} 展开为全文", "prompt via argv" in joined, joined[:200])
+    check("argv 模式无 prompt_file 残留", "prompt_file" not in joined,
+          joined[:200])
+    dr = b7.run(WS, "big prompt " * 3000, tag="iter-7-inference", dry_run=True)
+    check("超长 prompt 仍能展开（argv 上限留给调用方判断）",
+          len(" ".join(dr.cmd)) > 30000, len(" ".join(dr.cmd)))
+
     print()
     print(f"检查项 {checks}，失败 {len(fails)}")
     if fails:

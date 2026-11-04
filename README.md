@@ -53,7 +53,7 @@ runner = lambda **kw: BACKEND.run(**kw).as_dict()
 
 | 字段 | 说明 |
 |---|---|
-| `command` | **必填**。`list[str]`，支持占位符：`{prompt_file}` `{workdir}` `{run_dir}` `{tag}` `{model}` `{max_turns}` `{budget}` `{ws}` `{profile}` `{state}` `{skills}` |
+| `command` | **必填**。`list[str]`，支持占位符：`{prompt_file}`（prompt 全文的落盘路径）`{prompt}`（prompt 全文，走 argv）`{workdir}` `{run_dir}` `{tag}` `{model}` `{max_turns}` `{budget}` `{ws}` `{profile}` `{state}` `{skills}` |
 | `profile_dir` | profile 目录名，默认 `.wikiskill-cli-home` |
 | `env` | 传给子进程的环境变量（可含占位符）。**隔离靠这里**：把 CLI 的 home 指到 `{profile}` |
 | `model` / `max_turns` | 占位符默认值（调用方显式传参优先） |
@@ -76,9 +76,25 @@ runner = lambda **kw: BACKEND.run(**kw).as_dict()
 * **非零退出不重试**：CLI 自己失败就如实把退出码和 stderr 交上去，不吞。
 * 未做并发 rollout（同一 workspace 并发会让 `set_active_skills` 互相踩）。
 
-## 接真实 CLI（已备 `codex exec` 示例，参数未本机实测）
+## 接真实 CLI
 
-`examples/codex.json` 是一份可直接用的真实配置，关键点：
+### `examples/hermes.json`（Hermes Agent v0.21.5，**本机真跑通过**）
+
+`-z PROMPT` 是 oneshot 模式：只把最终回复打到 stdout（无 banner、无 session_id 行），
+审批自动 bypass，同时会加载 CWD 的 tools / memory / rules / AGENTS.md。
+它只吃 argv 形式的 prompt，所以这里用 `{prompt}`（全文进 argv）而不是 `{prompt_file}`——
+**argv 有长度上限**（Windows ≈32767 字符），prompt 很大时请换成 stdin 型 CLI。
+`--usage-file` 在跑完后写用量 JSON（含估算成本 / token / api_calls，跑失败也写），核账看它。
+
+本机实测（推理轮，prompt 为 `Reply with exactly: PONG`）：exit 0、33.3s、
+stdout = `PONG`、`usage.json` 记 deepseek-flash / in 49562 / out 3 / 1 次 API / $0.0074。
+
+⚠️ 那 49562 输入 tokens 是 **CLI 自带的系统提示与工具清单**，不是任务本身：
+套一层 agent CLI 的基线开销比直接调 API 高两个量级，做预算要按「每次调用」算。
+
+### `examples/codex.json`（参数来自官方文档，**未本机实测**）
+
+关键点：
 
 * prompt 走 **stdin**（`codex exec ... -`），所以 `command` 里不出现 `{prompt_file}`，
   配置项 `"stdin": "prompt_file"` 会让 backend 把 prompt 全文灌进子进程 stdin；
@@ -94,10 +110,11 @@ python examples/codex_dryrun.py
 python -c "import json,backend;backend.CliBackend(json.load(open('examples/codex.json'))).run('.', '你的任务', tag='iter-1-inference')"
 ```
 
-⚠️ 这些参数来自官方文档，**没有在本机跑通过**：开发环境的执行层白名单不放行
-`codex.exe`，网络白名单也只放行 GitHub，所以真实的「跑一轮」在这里做不了——
-CI 与 smoke 全部基于假 CLI，这一点请当成硬事实。第一次真跑前务必
-`codex exec --help` 对一遍参数名，并把 `model` 改成你账号可用的名字。
+⚠️ `codex.json` 的参数来自官方文档，**没有在本机跑通过**（本机 codex 额度已耗尽）。
+执行层白名单已把 `hermes` / `codex` 加入 `ALLOWED_COMMANDS`（**不并入 `SAFE_SHELL`**，
+每次调用仍走审批与网络闸门），但「改了代码 ≠ 运行中生效」：要重启后端才落到进程里，
+重启前只能走 `subprocess` 过渡通道（上面 hermes 实测就是这么跑的）。
+第一次真跑 codex 前务必 `codex exec --help` 对一遍参数名，并把 `model` 改成账号可用的名字。
 
 ## 持续集成
 
