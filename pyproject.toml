@@ -26,7 +26,7 @@ dev = ["ruff>=0.6"]
 "Upstream project" = "https://github.com/ashutoshsinghpr7/wikiskill"
 
 [tool.setuptools]
-py-modules = ["backend"]
+py-modules = ["backend", "review"]
 
 [tool.ruff]
 line-length = 100

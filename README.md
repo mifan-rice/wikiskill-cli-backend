@@ -156,15 +156,63 @@ python -c "import json,backend;backend.CliBackend(json.load(open('examples/codex
 重启前只能走 `subprocess` 过渡通道（上面 hermes 实测就是这么跑的）。
 第一次真跑 codex 前务必 `codex exec --help` 对一遍参数名，并把 `model` 改成账号可用的名字。
 
+## 人审队列（`review.py`：gate 的侧门）
+
+上游的自动通道是严格门（`R_val > R_best`）。真实素材驱动的提案在小 bench 上往往
+过不了门——不是经验没价值，而是门量的是另一件事。`review.py` 把这些提案留在
+`<workspace>/runs/review-queue.json`，等人显式裁定，而不是静默丢掉：
+
+```bash
+python review.py queue   --workspace /path/to/evo-workspace
+python review.py adopt   --workspace /path/to/evo-workspace 3 --dry-run
+python review.py dismiss --workspace /path/to/evo-workspace 3 --reason "bench-specific"
+python review.py export  --workspace /path/to/evo-workspace
+```
+
+| 状态 | 含义 |
+|---|---|
+| `pending` | 待裁定 |
+| `adopted` | 已落库（`PURPOSE.md` 里留 `Adopted: human-gate ... from iter-N` 溯源） |
+| `dismissed` | 看过、决定不采纳（`sync()` 不会把它复活） |
+
+四条实现约束（每条都对应一次真实踩坑）：
+
+1. **按溯源判落库，不按技能名**——同一个技能会被多轮 patch 提案命中，按名字判
+   会把从未落库的提案误标成 adopted，掩盖真待审。
+2. **`sync()` 幂等**：`dismissed` 保持 dismissed；`adopted` 一旦证据（PURPOSE.md
+   溯源行）消失，回落 `pending`，而不是从队列里消失。
+3. **编辑 fail loudly**：`patch` 的 target 必须唯一命中，0 次或多次都直接报错、
+   不写盘（宁可报错，不改坏）。
+4. **不隐式提交**：`adopt` 只写文件；`git add/commit` 仅在 `--commit` 时发生
+   （`--workspace` 可能不是你的仓库）。
+
+`--auto-publish` 用于「gate 通过不等于落库」的场合（例如另有自动质量评估把关）：
+此时 gate accept 仍留在 `pending`，等人裁定。
+
+## 上游接线验证（可选，零模型调用）
+
+真实模型跑一轮之前，先确认「上游真的会调用本 backend」：
+
+```bash
+pip install wikiskill
+python examples/evolve_dryrun.py
+```
+
+`dry_run=True` 不启动 CLI、不评分、不出网。实测输出：9 个 val（baseline）+
+13 个 train（rollout）+ maintainer + proposer = **24 次调用**，每次 prompt 非空、
+隔离 profile 建好、baseline 落账——证明 `workspace.json` → `backends.BACKENDS`
+→ `CliBackend` 的解析链通。**它不证明模型质量**，别拿它当 gating 效果证据。
+
 ## 持续集成
 
 `.github/workflows/ci.yml`（已随仓库提供）在 **Linux + Windows × Python 3.9 / 3.12**
-上跑三件事：字节码编译、`tests/smoke.py`（假 CLI，无模型无网络）、`ruff check`
+上跑四件事：字节码编译、`tests/smoke.py`（假 CLI，无模型无网络）、`tests/test_review.py`（人审队列）、`ruff check`
 （只挑 `E9`/`F`：语法错与未定义名）。本地等价命令：
 
 ```bash
-python -m compileall -q backend.py fixtures tests
+python -m compileall -q backend.py review.py fixtures tests
 python tests/smoke.py
+python tests/test_review.py
 ruff check .
 ```
 
