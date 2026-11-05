@@ -12,6 +12,14 @@ import shutil
 import sys
 import tempfile
 
+# 同 smoke.py：英文 locale 的 Windows runner 默认 cp1252，打印非 ASCII 会抛
+# UnicodeEncodeError 并中断整轮测试。强制 UTF-8 stdio，保证跨主机一致。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):  # 非 TextIOWrapper 或流已关闭时跳过
+        pass
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)

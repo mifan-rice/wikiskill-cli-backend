@@ -10,6 +10,15 @@ import os
 import shutil
 import sys
 
+# 英文 locale 的 Windows runner 默认 cp1252，打印中文用例名会抛 UnicodeEncodeError
+# 直接中断整轮测试（表现为 CI 上“1 秒内 exit 1”）。强制 UTF-8 stdio，使本套测试在
+# cp936 / cp1252 / UTF-8 主机上行为一致。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):  # 非 TextIOWrapper 或流已关闭时跳过
+        pass
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)

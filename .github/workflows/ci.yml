@@ -6,6 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# 用例名与诊断输出含中文；英文 locale 的 Windows runner 默认 cp1252，
+# 不固定 UTF-8 会让打印直接抛 UnicodeEncodeError 而误判为测试失败。
+env:
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: "utf-8"
+
 jobs:
   smoke:
     name: smoke (py${{ matrix.python }} / ${{ matrix.os }})
