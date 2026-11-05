@@ -1,5 +1,9 @@
 # wikiskill CLI backend（非官方）
 
+[![ci](https://github.com/mifan-rice/wikiskill-cli-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/mifan-rice/wikiskill-cli-backend/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
+
 把 [WikiSkill](https://github.com/ashutoshsinghpr7/wikiskill)（论文
 arXiv:2608.27454）的共演化循环，接到**任何能一次性跑一个 prompt 的 agent CLI**
 上，替代上游内置的 Hermes backend。
